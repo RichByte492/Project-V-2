@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockPro - Live Market Tracker</title>
+    
+    <!-- Include Chart.js library for creating charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+     <style>
+        :root {
+            --mint: #00bd9d;
+            --purple: #7c4dff;
+            --coral: #ff6b6b;
+            --navy: #2c3e50;
+            --sunshine: #f1c40f;
+            --slate: #34495e;
+            --cloud: #ecf0f1;
+            --light-gray: #f8f9fa;
+            --shadow-color: rgba(0,0,0,0.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: var(--light-gray);
+            color: var(--slate);
+            transition: background-color 0.3s ease;
+            display: flex; /* Enable Flexbox for body */
+            flex-direction: column; /* Stack elements vertically */
+            align-items: center; /* Center content horizontally */
+            min-height: 100vh; /* Ensure full viewport height */
+        }
+
+        .dark-mode body {
+            background: #181818;
+            color: #f0f0f0;
+        }
+
+        .dark-mode .hero {
+            background: linear-gradient(120deg, #00806b 0%, #5e35b1 100%);
+            color: #fff;
+        }
+
+        .dark-mode .nav-bar {
+            background: #121212;
+            box-shadow: 0 2px 10px rgba(255,255,255,0.1);
+        }
+
+        .dark-mode .nav-bar a {
+            color: #eee;
+        }
+
+        .dark-mode .nav-bar a:hover {
+            background: #00806b;
+        }
+
+        .dark-mode .wrapper,
+        .dark-mode .stock-tile,
+        .dark-mode .footer {
+            background: #222;
+            box-shadow: 0 8px 20px rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .dark-mode .stock-extra {
+            border-top-color: #444;
+        }
+
+        .hero {
+            background: linear-gradient(120deg, var(--mint) 0%, var(--purple) 100%);
+            color: white;
+            padding: 3rem 2rem; /* Increased padding */
+            text-align: center;
+            box-shadow: 0 4px 15px var(--shadow-color);
+            transition: background 0.3s ease, color 0.3s ease;
+            border-radius: 10px; /* Added border-radius */
+            margin-bottom: 20px; /* Added margin */
+            width: 90%; /* Limit width */
+            max-width: 1000px;
+        }
+
+        .hero h1 {
+            font-size: 3.5em; /* Increased font size */
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .hero p {
+            font-size: 1.3em;
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+
+        .nav-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--navy);
+            padding: 15px 30px; /* Increased horizontal padding */
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px var(--shadow-color);
+            transition: background-color 0.3s ease;
+            width: 100%; /* Full width */
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 30px; /* Increased gap */
+        }
+
+        .nav-bar a {
+            color: white;
+            text-decoration: none;
+            font-size: 1.2rem; /* Increased font size */
+            padding: 10px 20px; /* Increased padding */
+            border-radius: 25px; /* More rounded */
+            transition: all 0.3s ease;
+        }
+
+        .nav-bar a:hover {
+            background: var(--mint);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2); /* Added shadow on hover */
+        }
+
+        .search-bar {
+            display: flex;
+        }
+
+        .search-bar input {
+            padding: 10px 18px; /* Increased padding */
+            border-radius: 25px 0 0 25px;
+            border: none;
+            outline: none;
+            font-size: 1.1rem;
+            color: var(--slate);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .search-bar button {
+            background: var(--mint);
+            color: white;
+            border: none;
+            padding: 10px 18px; /* Increased padding */
+            border-radius: 0 25px 25px 0;
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+
+        .search-bar button:hover {
+            background: #00a387;
+            transform: scale(1.05);
+        }
+
+        .wrapper {
+            padding: 30px;
+            max-width: 1200px;
+            width: 95%; /* Adjust width */
+            margin: 20px auto; /* Center and add margin */
+            transition: background-color 0.3s ease, box-shadow 0.3s ease, border 0.3s ease;
+            background: white; /* Add default background */
+            border-radius: 15px;
+            box-shadow: 0 5px 15px var(--shadow-color);
+        }
+
+        .wrapper > section {
+            margin-bottom: 40px;
+            text-align: center; /* Center section titles */
+        }
+
+        .wrapper > section:last-child {
+            margin-bottom: 0;
+        }
+
+        .stock-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Slightly larger tiles */
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .stock-tile {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            cursor: pointer;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+            border: 1px solid rgba(0,0,0,0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stock-tile:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 25px rgba(0,0,0,0.1);
+        }
+
+        .stock-tile.loading::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            border-radius: inherit; /* Match tile border-radius */
+        }
+
+        .stock-tile.loading::after {
+            content: '';
+            width: 35px;
+            height: 35px;
+            border: 6px solid var(--mint);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 11;
+        }
+
+        @keyframes spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        .stock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .stock-name {
+            color: var(--navy);
+            font-size: 1.7em;
+            margin: 0;
+            font-weight: bold;
+        }
+
+        .price-tag {
+            font-size: 1.3em;
+            font-weight: 600;
+        }
+
+        .up { color: var(--mint); }
+        .down { color: var(--coral); }
+
+        .stock-extra {
+            display: none;
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 2px solid var(--cloud);
+            transition: border-top-color 0.3s ease;
+        }
+
+        .stock-tile.open .stock-extra {
+            display: block;
+        }
+
+        .stock-extra p {
+            margin-bottom: 10px;
+            font-size: 1.05rem;
+        }
+
+        .cool-btn {
+            background: linear-gradient(120deg, var(--mint) 0%, var(--purple) 100%);
+            color: white;
+            border: none;
+            padding: 14px 30px;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px var(--shadow-color);
+            margin-top: 15px;
+        }
+
+        .cool-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
+        .footer {
+            background: var(--navy);
+            color: white;
+            text-align: center;
+            padding: 30px;
+            margin-top: 60px;
+            transition: background-color 0.3s ease;
+            width: 100%;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 450px; /* Increased height */
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left; /* Align form labels to the left */
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: calc(100% - 22px); /* Adjust for padding and border */
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid var(--cloud);
+            box-sizing: border-box;
+            font-size: 1.1rem;
+            color: var(--slate);
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            border-color: var(--mint);
+            box-shadow: 0 0 5px rgba(0, 189, 157, 0.3);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        #chart-controls {
+            margin-top: 30px;
+            display: flex;
+            justify-content: center; /* Center the controls */
+            gap: 20px;
+            align-items: center;
+        }
+
+        #chart-controls label {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        #chart-controls select {
+            padding: 10px 15px;
+            border-radius: 10px;
+            border: 1px solid var(--cloud);
+            outline: none;
+            font-size: 1.1rem;
+            color: var(--slate);
+            cursor: pointer;
+            appearance: none; /* Remove default arrow */
+            -webkit-appearance: none;
+            background-image: url('data:image/svg+xml;utf8,<svg fill="black" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+            background-repeat: no-repeat;
+            background-position-x: 100%;
+            background-position-y: 5px;
+        }
+
+        #learn ul {
+            list-style: none;
+            padding: 0;
+            margin-top: 20px;
+        }
+
+        #learn li {
+            padding: 10px 0;
+            font-size: 1.1rem;
+            border-bottom: 1px solid var(--cloud);
+        }
+
+        #learn li:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero section with main heading -->
+    <header class="hero">
+        <h1>Welcome to StockPro</h1>
+        <p>Your go-to platform for real-time market insights!</p>
+    </header>
+
+    <!-- Navigation bar -->
+    <nav class="nav-bar">
+        <div class="nav-links">
+            <a href="#market">Market</a>
+            <a href="#charts">Charts</a>
+            <a href="#learn">Learn</a>
+            <a href="#reach">Contact</a>
+        </div>
+        <div class="search-bar">
+            <input type="text" id="stock-search" placeholder="Search stocks...">
+            <button onclick="searchStocks()">Search</button>
+        </div>
+    </nav>
+
+    <!-- Main content wrapper -->
+    <div class="wrapper">
+        <!-- Live Market Feed section -->
+        <section id="market">
+            <h2>Live Market Feed</h2>
+            <div class="stock-grid" id="stock-grid">
+                <!-- Stock tiles will be dynamically inserted here -->
+            </div>
+        </section>
+
+        <!-- Learn section -->
+        <section id="learn">
+            <h2>Learn About Investing</h2>
+            <ul>
+                <li>Understanding Stock Markets</li>
+                <li>Fundamental Analysis</li>
+                <li>Technical Analysis</li>
+                <li>Risk Management</li>
+            </ul>
+        </section>
+
+        <!-- Contact section -->
+        <section id="reach">
+            <h2>Get in Touch</h2>
+            <form id="contact-form">
+                <div class="form-group">
+                    <label for="name">Name:</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="message">Message:</label>
+                    <textarea id="message" name="message" required></textarea>
+                </div>
+                <button type="submit" class="cool-btn">Send Message</button>
+            </form>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2024 StockPro. All rights reserved.</p>
+    </footer>
+
+    <script>
+        const stockSymbols = ['AAPL', 'GOOGL', 'AMZN', 'MSFT', 'TSLA']; // More symbols
+        const apiKey = 'YP2G6WBDG1F4DJP0'; // Replace with your API key from Alpha Vantage or IEX Cloud
+        let stockDataCache = {}; // Cache to store fetched stock data
+        let stockChartInstance = null;
+        let currentChartSymbol = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStocks();
+            populateStockSelector();
+
+            // Example of adding dark mode toggle
+            // const body = document.body;
+            // body.classList.toggle('dark-mode'); // Toggle on load for demonstration
+        });
+
+        async function fetchStockData(symbol) {
+            if (stockDataCache[symbol]) {
+                return stockDataCache[symbol];
+            }
+
+            const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${apiKey}`; // Using GLOBAL_QUOTE for simplicity
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data["Global Quote"] && data["Global Quote"]["05. price"]) {
+                    stockDataCache[symbol] = data["Global Quote"];
+                    return data["Global Quote"];
+                } else {
+                    console.error(`Error fetching data for ${symbol}:`, data);
+                    return null;
+                }
+            } catch (error) {
+                console.error(`Error fetching data for ${symbol}:`, error);
+                return null;
+            }
+        }
+
+        async function loadStocks() {
+            const stockGrid = document.getElementById('stock-grid');
+            stockGrid.innerHTML = ''; // Clear previous data
+
+            for (let symbol of stockSymbols) {
+                const stockTile = createStockTile(symbol);
+                stockGrid.appendChild(stockTile);
+                updateStockTileData(stockTile, symbol);
+            }
+        }
+
+        function createStockTile(symbol) {
+            const stockTile = document.createElement('div');
+            stockTile.classList.add('stock-tile');
+            stockTile.innerHTML = `
+                <div class="stock-header">
+                    <h3 class="stock-name">${symbol}</h3>
+                    <span class="price-tag"></span>
+                </div>
+                <p class="change-percent"></p>
+                <div class="stock-extra">
+                    <p>Open: <span class="open-price"></span></p>
+                    <p>High: <span class="high-price"></span></p>
+                    <p>Low: <span class="low-price"></span></p>
+                    <p>Volume: <span class="volume"></span></p>
+                    <button class="cool-btn">Trade Now</button>
+                </div>
+            `;
+
+            stockTile.addEventListener('click', () => {
+                stockTile.classList.toggle('open');
+            });
+
+            return stockTile;
+        }
+
+        async function updateStockTileData(tile, symbol) {
+            tile.classList.add('loading');
+            const stockData = await fetchStockData(symbol);
+            tile.classList.remove('loading');
+
+            if (stockData) {
+                const priceTag = tile.querySelector('.price-tag');
+                const changePercent = tile.querySelector('.change-percent');
+                const openPrice = tile.querySelector('.open-price');
+                const highPrice = tile.querySelector('.high-price');
+                const lowPrice = tile.querySelector('.low-price');
+                const volume = tile.querySelector('.volume');
+
+                const currentPrice = parseFloat(stockData['05. price']);
+                const previousClose = parseFloat(stockData['08. previous close']);
+                const change = currentPrice - previousClose;
+                const changePct = (change / previousClose) * 100;
+
+                priceTag.textContent = `$${currentPrice.toFixed(2)}`;
+                changePercent.textContent = `${change >= 0 ? '+' : ''}${changePct.toFixed(2)}%`;
+                changePercent.className = `change-percent ${change >= 0 ? 'up' : 'down'}`;
+                priceTag.className = `price-tag ${change >= 0 ? 'up' : 'down'}`;
+
+                openPrice.textContent = `$${parseFloat(stockData['02. open']).toFixed(2)}`;
+                highPrice.textContent = `$${parseFloat(stockData['03. high']).toFixed(2)}`;
+                lowPrice.textContent = `$${parseFloat(stockData['04. low']).toFixed(2)}`;
+                volume.textContent = stockData['06. volume'];
+            } else {
+                // Handle error case, e.g., display "Data unavailable"
+                tile.querySelector('.price-tag').textContent = 'N/A';
+                tile.querySelector('.change-percent').textContent = 'Data unavailable';
+            }
+        }
+
+        async function populateStockSelector() {
+            const selector = document.getElementById('stock-selector');
+            stockSymbols.forEach(symbol => {
+                const option = document.createElement('option');
+                option.value = symbol;
+                option.textContent = symbol;
+                selector.appendChild(option);
+            });
+
+            selector.addEventListener('change', (event) => {
+                const selectedSymbol = event.target.value;
+                if (selectedSymbol) {
+                    loadStockChart(selectedSymbol);
+                }
+            });
+
+            // Load the chart for the first stock by default
+            if (stockSymbols.length > 0) {
+                loadStockChart(stockSymbols[0]);
+            }
+        }
+
+        async function loadStockChart(symbol) {
+            if (currentChartSymbol === symbol && stockChartInstance) {
+                return; // Don't reload if it's the same stock
+            }
+            currentChartSymbol = symbol;
+
+            const chartData = await fetchHistoricalData(symbol);
+            if (chartData) {
+                const labels = chartData.map(item => item.date).reverse();
+                const prices = chartData.map(item => item.close).reverse();
+
+                if (stockChartInstance) {
+                    stockChartInstance.destroy(); // Destroy the previous chart
+                }
+
+                const ctx = document.getElementById('stockChart').getContext('2d');
+                stockChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: `${symbol} Stock Price`,
+                            data: prices,
+                            borderColor: '#00bd9d',
+                            fill: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false
+                    }
+                });
+            }
+        }
+
+        async function fetchHistoricalData(symbol) {
+            const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${symbol}&outputsize=compact&apikey=${apiKey}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data['Time Series (Daily)']) {
+                    return Object.entries(data['Time Series (Daily)']).map(([date, values]) => ({
+                        date,
+                        open: parseFloat(values['1. open']),
+                        high: parseFloat(values['2. high']),
+                        low: parseFloat(values['3. low']),
+                        close: parseFloat(values['4. close']),
+                        volume: values['6. volume']
+                    }));
+                } else {
+                    console.error(`Error fetching historical data for ${symbol}:`, data);
+                    return null;
+                }
+            } catch (error) {
+                console.error(`Error fetching historical data for ${symbol}:`, error);
+                return null;
+            }
+        }
+
+        function searchStocks() {
+            const searchTerm = document.getElementById('stock-search').value.toUpperCase();
+            const stockGrid = document.getElementById('stock-grid');
+            const stockTiles = Array.from(stockGrid.children);
+
+            stockTiles.forEach(tile => {
+                const stockName = tile.querySelector('.stock-name').textContent.toUpperCase();
+                if (stockName.includes(searchTerm)) {
+                    tile.style.display = '';
+                } else {
+                    tile.style.display = 'none';
+                }
+            });
+        }
+
+    </script>
+</body>
+</html>
